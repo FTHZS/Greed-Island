@@ -1,0 +1,147 @@
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+
+class Location {
+    static HashMap<String,Integer> energyCosts;
+    static String[] Locations;
+    
+    static HashMap<String,ArrayList<String>> resourceModel;
+    
+    static {
+        energyCosts = new HashMap<String,Integer>();
+        energyCosts.put("Bay-Volcano",100);
+        energyCosts.put("Bay-South Coast",100);
+        energyCosts.put("Forest-Volcano",100);
+        energyCosts.put("Forest-Bay",100);
+        energyCosts.put("Forest-East Coast",100);
+        energyCosts.put("Forest-South Coast",100);
+        energyCosts.put("East Coast-Volcano",100);
+        energyCosts.put("East Coast-South Coast",100);
+        energyCosts.put("East Coast-Forest",100);
+        energyCosts.put("South Coast-Bay",100);
+        energyCosts.put("South Coast-East Coast",100);
+        energyCosts.put("South Coast-Forest",100);
+        energyCosts.put("Volcano-Bay",100);
+        energyCosts.put("Volcano-East Coast",100);
+        energyCosts.put("Volcano-Forest",100);
+        
+        Locations = new String[]{
+            "Forest",
+            "East Coast",
+            "Bay",
+            "Volcano",
+            "Soutch Coast"
+        };
+        
+        
+    }
+    
+    static void initialize() {
+        resourceModel = new HashMap<String,ArrayList<String>>();
+        
+        for (String location: Locations) {
+            ArrayList<String> defaultList = new ArrayList<String>();
+            for (int i = 0;i<30;i++) {defaultList.add("Berries");}
+            for (int i = 0;i<30;i++) {defaultList.add("Wood");}
+            for (int i = 0;i<30;i++) {defaultList.add("Stone");}
+            for (int i = 0;i<30;i++) {defaultList.add("Vines");}
+            for (int i = 0;i<30;i++) {defaultList.add("Apple");}
+            for (int i = 0;i<30;i++) {defaultList.add("Poisonous_Berries");}
+            
+            resourceModel.put(location,new ArrayList<String>(defaultList));
+            //AtomicInteger recordedSize = new AtomicInteger(0);
+            Thread t = new Thread(new FListener<ArrayList<Character>>(getContestantsAt(location),x->x.size()>0,5+RarityPool.randInt(10)){
+                @Override
+                public void onCondition() {
+                    if (getResources(location).size() <= 0) {
+                        return;
+                        //thread . stop function goes here
+                    }
+                    if (getContestantsAt(location).size() <= 0) {
+                        return;
+                        //make the get contestants function thread safe.
+                    }
+                    
+                    int random = RarityPool.randInt(getContestantsAt(location).size());
+                    Character chosen = getContestantsAt(location).get(random);
+                    
+                    /*int currentTime = Greed_Island.time.get();
+                    int randomTime = 5+RarityPool.randInt(10);
+                    
+                    while (!(Greed_Island.time.get() >= currentTime+randomTime)) {
+                        try {
+                            Thread.sleep(0);
+                        } catch (Exception e) {}
+                    }*/
+                    
+                    giveResource(location, chosen);
+                    
+                }
+            });
+            t.start();
+        }
+    }
+    
+    static ArrayList<Character> getContestantsAt(String location) {
+        ArrayList<Character> contestants = new ArrayList<Character>();
+        for (Character character : Greed_Island.Contestants) {
+            if (character.currentLocation == location) {
+                contestants.add(character);
+            }
+        }
+        
+        return contestants;
+    }
+    
+    static String[] getTravelOptions(String currentLocation) {
+        switch (currentLocation) {
+            case "Bay":
+                return new String[]{"Volcano","South Coast"};
+                
+            case "Forest":
+                return new String[]{"Volcano","South Coast","East Coast","Bay"};
+                
+            case "East Coast":
+                return new String[]{"Volcano","South Coast","Forest"};
+                
+            case "South Coast":
+                return new String[]{"East Coast","Bay","Forest"};
+                
+            case "Volcano":
+                return new String[]{"Bay","East Coast","Forest"};
+            default:
+                return new String[0];
+        }
+    }
+    
+    static int getEnergyCost(String from, String to){
+        return energyCosts.get(from+"-"+to);
+    }
+    
+    static ArrayList<String> getResources(String location) {
+        return resourceModel.get(location);
+    }
+    
+    static void giveResource(String location, Character character) {
+        ArrayList<String> resources = resourceModel.get(location);
+        int random = RarityPool.randInt(resources.size());
+        String item = resources.get(random);
+        
+        //character.inventory.set(item,character.inventory.get(item).units + 1);
+        character.collect(item);
+        //add function to remove item from that place's resourceModel
+        int i;
+        boolean removed = false;
+        for (i = 0; i<resourceModel.get(location).size();i++) {
+            if (removed == false && resourceModel.get(location).get(i) == item) {
+                resourceModel.remove(i);
+                removed = true;
+            }
+        }
+    }
+    
+    static String[] getLocations() {
+        return new String[]{"Volcano","Forest","Bay","East Coast","South Coast"};
+    }
+}
