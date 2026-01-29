@@ -7,6 +7,7 @@ class Location {
     static String[] Locations;
     
     static HashMap<String,ArrayList<String>> resourceModel;
+    private static ArrayList<Listener> threadpool;
     
     static {
         energyCosts = new HashMap<String,Integer>();
@@ -34,7 +35,7 @@ class Location {
             "Soutch Coast"
         };
         
-        
+        threadpool = new ArrayList<Listener>();
     }
     
     static void initialize() {
@@ -56,11 +57,11 @@ class Location {
             add(location,"Wood",10);
             add(location,"Stone",10);
             add(location,"Vines",10);
-            add(location,"Apple",20);
+            add(location,"Apple",30);
             add(location,"Poisonous_Berries",30);
             
             //AtomicInteger recordedSize = new AtomicInteger(0);
-            Thread t = new Thread(new FListener<ArrayList<Character>>(getContestantsAt(location),x->x.size()>0,5+RarityPool.randInt(10)){
+            TickListener<ArrayList<Character>> t = new TickListener<ArrayList<Character>>(getContestantsAt(location),x->x.size()>0,5+RarityPool.randInt(10)){
                 @Override
                 public void onCondition() {
                     if (getResources(location).size() <= 0) {
@@ -74,7 +75,10 @@ class Location {
                     
                     int random = RarityPool.randInt(getContestantsAt(location).size());
                     Character chosen = getContestantsAt(location).get(random);
-                    
+                    while (chosen.Status.get("Dead") == true) {
+                        random = RarityPool.randInt(getContestantsAt(location).size());
+                        chosen = getContestantsAt(location).get(random);
+                    }
                     /*int currentTime = Greed_Island.time.get();
                     int randomTime = 5+RarityPool.randInt(10);
                     
@@ -87,13 +91,26 @@ class Location {
                     giveResource(location, chosen);
                     
                 }
-            });
+            };
+            threadpool.add(t);
+            t.setName(location+" resource tick");
             t.start();
+        }
+    }
+    
+    static void destroy() {
+        for (Listener l :threadpool) {
+            l.stop();
         }
     }
     
     static void add(String location, String resource, int number) {
         for (int i = 0;i<number;i++) {
+            
+            if (resourceModel.get(location) == null) {
+                resourceModel.put(location,new ArrayList<String>());
+            }
+            
             resourceModel.get(location).add(resource);
         }
     }
@@ -154,6 +171,7 @@ class Location {
                 removed = true; //for ensuring that only one copy is removed.
             }
         }
+        
     }
     
     static String[] getLocations() {

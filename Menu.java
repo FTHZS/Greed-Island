@@ -14,12 +14,17 @@ class Menu {
     }
     
     void getInput() {
+        Dialogue[] para = new Dialogue[Options.size()+1];
+
+        int i = 0;
         for (String option:Options) {
-            System.out.println(option);
+            //System.out.println(option);
+            para[i++]= new Dialogue(option+"\n");
         }
         
         Scanner sc = new Scanner(System.in);
-        System.out.print("Enter your choice: ");
+        para[Options.size()]=new Dialogue("Enter your choice: ");
+        new Dialogue(para).display(0,0);
         choice = sc.next();
     }
 }

@@ -10,60 +10,39 @@ class Character {
     volatile HashMap<String,Boolean> Status;
     HashMap<String,Integer> Influences;
     Inventory inventory;
-    int Health;
-    int HungerLevel;
-    //int ThirstLevel;
-    int EnergyLevel;
+    
+    AtomicInteger Health;
+    AtomicInteger HungerLevel;
+    AtomicInteger EnergyLevel;
+    
     String currentLocation;
     RarityPool decisionProbabilityModel;
     ArrayList<String> Truces;
     private boolean destroyed;
+    private ArrayList<Listener> threadpool;
     
     final int decisionFrequency;
-    //int[] SleepDetails;
-    //Decision[] decisionList;
-    
-    //static RarityPool randomInt;
-    //static HashMap<String,Integer> decisionProbability;
-    /*static {
-        //randomInt = new RarityPool(0,100);
-        
-        decisionProbability = new HashMap<String,Integer>();
-        
-        decisionProbability.put("Sleep",0);
-        decisionProbability.put("Travel",0);
-        decisionProbability.put("Observe",0);
-        decisionProbability.put("Eat",0);
-        decisionProbability.put("Drink",0);
-        decisionProbability.put("Give",0);
-    }*/
+    private int[] SleepDetails;
+    private int poisonedAt;
     
     Character(String Name){
         this.Name = Name;
-        Health = 1000;
-        HungerLevel = 1000;
-        //ThirstLevel = 100;
-        EnergyLevel = 0;
+        Health= new AtomicInteger(1000);
+        HungerLevel= new AtomicInteger(1000);
+        EnergyLevel= new AtomicInteger(0);
+        
         currentLocation = "Bay";
         Truces = new ArrayList<String>();
-        decisionFrequency = 200;//+RarityPool.randInt(;
+        decisionFrequency = 200;
         
         Status = new HashMap<String,Boolean>();
         Traits = new HashMap<String,Integer>();
         inventory = new Inventory();
         decisionProbabilityModel = new RarityPool();
         Influences = new HashMap<String,Integer>();
-        //SleepDetails = new int[]{0,0};
+        SleepDetails = new int[]{0,0};
         
-        /*Traits.put("Bravery",0);
-        Traits.put("Strength",0);
-        Traits.put("Physique",0);
-        Traits.put("Sloth",0);
-        Traits.put("Amiability",0);
-        Traits.put("Cunning",0);
-        Traits.put("Bloodthirst",0);
-        Traits.put("Sharing",0);
-        Traits.put("Consumer",0);*/
+        threadpool = new ArrayList<Listener>();
         
         Traits.put("Sleep",0);
         Traits.put("Travel",0);
@@ -76,26 +55,13 @@ class Character {
         Status.put("Poisoned",false);
         Status.put("Tired",false);
         Status.put("Confused",false);
-        //Status.put("Thirsty",false);
         Status.put("Hungry",false);
         Status.put("Sleeping",false);
         Status.put("Dead",false);
         
-        /*inventory.set("Wood",0);
-        //Inventory.put("Water",item,0);
-        inventory.set("Apples",0);
-        inventory.set("Berries",0);
-        inventory.set("Posionous Berries",0);
-        inventory.set("Stone",0);
-        inventory.set("Vines",0);
-        inventory.set("Sticks",0);
-        inventory.set("Logs",0);*/
-        
         decisionProbabilityModel.add("Sleep",decisionFrequency+100);
         decisionProbabilityModel.add("Travel",decisionFrequency+100);
-        //decisionProbabilityModel.add("Observe",100);
         decisionProbabilityModel.add("Eat",decisionFrequency);
-        //decisionProbabilityModel.add("Drink",200);
         decisionProbabilityModel.add("Give",decisionFrequency);
         decisionProbabilityModel.add("Craft",decisionFrequency);
         decisionProbabilityModel.add("Attack",decisionFrequency+100);
@@ -107,21 +73,12 @@ class Character {
         Influences.put("Craft",0);
         Influences.put("Attack",0);
         
-        /*decisionList = new Decision[]{
-            new Sleep(this),
-            new Travel(this),
-            new Observe(this),
-            new Eat(this),
-            new Drink(this),
-            new Give(this)
-        };*/
-        
     }
     
     Character Clone(String name) {
         Character child = new Character(name);
                 
-        child.Health = Health;
+        child.Health = new AtomicInteger(Health.get());
         
         int bound = 100;
         int variance = 15;
@@ -139,6 +96,15 @@ class Character {
             child.Traits.put(entry.getKey(),entry.getValue()+mutation);
         }
         
+        child.Status = new HashMap<String,Boolean>();
+        child.Status.put("Diseased",false);
+        child.Status.put("Poisoned",false);
+        child.Status.put("Tired",false);
+        child.Status.put("Confused",false);
+        child.Status.put("Hungry",false);
+        child.Status.put("Sleeping",false);
+        child.Status.put("Dead",false);
+        
         /*child.decisionProbabilityModel = new RarityPool();
         for (Map.Entry<String,Double> entry : decisionProbabilityModel.Outcomes.entrySet()) {
             int mutation = RarityPool.randInt(20)-10;
@@ -153,7 +119,7 @@ class Character {
         currentLocation = choices[RarityPool.randInt(choices.length)];
         
         /*new Thread(
-        new FListener<AtomicInteger>(Greed_Island.time,(x)->(x.get() < 300)&&(x.get() > 1740),0){
+        new TickListener<AtomicInteger>(Greed_Island.time,(x)->(x.get() < 300)&&(x.get() > 1740),0){
             @Override
             public void onCondition() {
                 Influences.replace("Sleep",25);
@@ -162,25 +128,20 @@ class Character {
         */ 
        //this overrides the sleep influence.
         
-       new Thread(new FListener<Boolean>(true,(x) -> true,1){
+        TickListener<Boolean> t1 = new TickListener<Boolean>(true,(x) -> true,1){
             @Override
             void onCondition() {
-                if (Status.get("Dead")==true) {
-                    return;
-                }
-                
                 setHunger(-1,true);
             }
-        }).start();
+        };
+        threadpool.add(t1);
+        t1.setName(Name+" hunger tick");
+        t1.start();
         
-        new Thread(new FListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Poisoned")==true,1){
+        TickListener<HashMap<String, Boolean>> t2 = new TickListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Poisoned")==true,1){
             @Override
             void onCondition() {
-                if (Status.get("Dead")==true) {
-                    return;
-                }
-                
-                int currentTime = Greed_Island.time.get();
+                /*int currentTime = Greed_Island.time.get();
                 for (int i=0;i<15;i++) {
                     while (Greed_Island.time.get() < (currentTime+(1*i))) {
                         try {
@@ -192,33 +153,71 @@ class Character {
                         break;
                     }
                 }
-                setStatus("Poisoned",false);
-            }
-        }).start();
-        
-        new Thread(new FListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Hungry")==true,1){
-            @Override
-            void onCondition() {
-                if (Status.get("Dead")==true) {
+                setStatus("Poisoned",false);*/
+                
+                if (Greed_Island.time.get() > 15+poisonedAt) {
+                    setStatus("Poisoned",false);
                     return;
                 }
                 
+                //sendmessage(" has lost 1 hp to poison.");
                 setHealth(-1,true);
             }
-        }).start();
+        };
+        threadpool.add(t2);
+        t2.setName(Name+" poison tick");
+        t2.start();
         
+        TickListener<HashMap<String, Boolean>> t3 = new TickListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Hungry")==true,1){
+            @Override
+            void onCondition() {
+                //System.out.println(Name+" has incremented -1 hp to hunger. "+Health);
+                if (Health.get() <=0) {
+                    return;
+                }
+                setHealth(-1,true);
+            }
+        };
+        threadpool.add(t3);
+        t3.setName(Name+" Hungry-health tick");
+        t3.start();
+        
+        StateListener<HashMap<String, Boolean>> t4 = new StateListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Sleeping")==true,1){
+            @Override
+            void onCondition() {                
+                int now = Greed_Island.time.get();
+                while (Greed_Island.time.get() < SleepDetails[0]+60*SleepDetails[1]) {
+                    try {
+                        Thread.sleep(0);
+                    } catch (Exception e) {
+                        //e.printStackTrace();
+                        setStatus("Sleeping",false);
+                    }
+                }
+                
+                if (Greed_Island.messageSettings.get("wake up")) sendmessage(" woke up.");
+                setStatus("Sleeping",false);
+            }
+        };
+        threadpool.add(t4);
+        t4.setName(Name+" Sleep State");
+        t4.start();
     }
     
     void setHealth(int value, boolean increment){
-        Health = (increment==false)? value: (Health+value);
+        int newHealth;
+        if (!increment) {
+            Health.set(value); // atomic write
+            newHealth = value;
+        } else {
+            newHealth = Health.addAndGet(value); // atomic add
+        }
         
-        if (Health <= 0) {
-            setStatus("Dead",true);
-            Health = 0;
-            
-            //sendmessage(" died.");
-            System.out.println(Name+" has died.");
-            
+        //System.out.println(Name+" has incremented "+value+" hp, now at "+Health);
+        if (newHealth <= 0) {
+            sendmessage(" has died.");
+            setStatus("Dead", true);
+            Health.set(0); // clamp to zero safely
             destroy();
         }
     }
@@ -229,50 +228,56 @@ class Character {
         }
         
         destroyed = true;
+        
+        for (Listener l :threadpool) {
+            l.stop();
+        }
+        
         for (Map.Entry<String,Item> entry: inventory.inventory.entrySet()) {
             Location.add(currentLocation,entry.getKey(),entry.getValue().units);
+            inventory.set(entry.getKey(),0);
         }
     }
     
     void setHunger(int value, boolean increment){
-        HungerLevel = (increment==false)? value: (HungerLevel+value);
-        
-        if (HungerLevel < 0) {
-            setStatus("Hungry",true);
-            HungerLevel = 0;
-            //Health -= 1;
-            setInfluence("Eat",50,false); 
+        int newHunger;
+
+        if (!increment) {
+            HungerLevel.set(value);   // atomic write
+            newHunger = value;
         } else {
-            setStatus("Hungry",false);
-            setInfluence("Eat",-50,false);
+            newHunger = HungerLevel.addAndGet(value); // atomic add
+        }
+    
+        if (newHunger < 0) {
+            setStatus("Hungry", true);
+            HungerLevel.set(0); // clamp to 0 safely
+            setInfluence("Eat", 50, false);
+        } else {
+            setStatus("Hungry", false);
+            setInfluence("Eat", -50, false);
         }
     }
     
-    void setEnergy(int value, boolean increment){
-        EnergyLevel = (increment==false)? value: (EnergyLevel+value);
-        
-        /*if (EnergyLevel > 700){
-            Influences.replace("Sleep",-50);
-        }*/
-        
-        if (EnergyLevel < 0) {
-            setStatus("Tired",true);
-            EnergyLevel = 0;
-            setInfluence("Sleep",50,true);
+    void setEnergy(int value, boolean increment) {
+        int newEnergy;
+    
+        if (!increment) {
+            EnergyLevel.set(value);
+            newEnergy = value;
         } else {
-            setStatus("Tired",false);
-            //setInfluence("Sleep",-50,true);
+            newEnergy = EnergyLevel.addAndGet(value);
+        }
+    
+        if (newEnergy < 0) {
+            setStatus("Tired", true);
+            EnergyLevel.set(0);
+            setInfluence("Sleep", 50, true);
+        } else {
+            setStatus("Tired", false);
+            // setInfluence("Sleep", -50, true);
         }
     }
-    
-    /*void setThirst(int value, boolean increment){
-        ThirstLevel = (increment==false)? value: (ThirstLevel+value);
-        
-        if (ThirstLevel < 0) {
-            setStatus("Thirsty",true);
-            ThirstLevel = 0;
-        }
-    }*/
     
     void setInfluence(String key,int value, boolean increment) {
         int prob = decisionProbabilityModel.getR(key)-Traits.get(key);
@@ -284,7 +289,11 @@ class Character {
         Influences.replace(key, increment==true? Influences.get(key)+increase : value);
     }
     
-    void setStatus(String status, boolean state) {
+    synchronized void setStatus(String status, boolean state) {
+        if (status == "Poisoned") {
+            poisonedAt = Greed_Island.time.get();
+        }
+        
         Status.replace(status,state);
     }
     
@@ -341,7 +350,7 @@ class Character {
                 information = " for "+random+" hours.";
                 break;
             case "Travel":
-                if (EnergyLevel <= 0) {
+                if (EnergyLevel.get() <= 0) {
                     randomDecide();
                     return;
                 }
@@ -363,12 +372,13 @@ class Character {
                 break;
             case "Give":
                 Choices = inventory.getItemList();
-                if (Choices.size() == 0) {
+                if (Choices.size() == 0 || Greed_Island.getCount()<2) {
                     randomDecide();
                     return;
                 }
                 choice = Choices.get(RarityPool.randInt(Choices.size()));
                 
+
                 random = RarityPool.randInt(Greed_Island.Contestants.length);
                 Character recipient = Greed_Island.Contestants[random];
                 while (recipient.Status.get("Dead") == true || recipient.Name == Name) {
@@ -404,7 +414,7 @@ class Character {
                     weapon = RarityPool.randInt(1)==1 ? "Axe":"Bow";
                 }
                 
-                if (weapon == "") {
+                if (weapon == ""||Greed_Island.getCount()<2) {
                     randomDecide();
                     return;
                 }
@@ -460,7 +470,7 @@ class Character {
     }
     
     void sendmessage(String content) {
-        new Dialogue((Greed_Island.timeToString() +" | "+Name+content+"\n")).display(Greed_Island.showMessages==false ? 0 : 10);
+        new Dialogue((Greed_Island.timeToString() +" | "+Name+content+"\n")).display(Greed_Island.showMessages==false ? 0 : Greed_Island.messageInterval);
     }
     
     /*ArrayList<String> getEdibles(){
@@ -474,7 +484,7 @@ class Character {
     }*/
     
     void Travel(String location){
-        EnergyLevel -= Location.getEnergyCost(currentLocation,location);
+        setEnergy(Location.getEnergyCost(currentLocation,location),true);
         currentLocation = location;
     }
     
@@ -482,19 +492,21 @@ class Character {
         setEnergy(hours*100,true);
         
         setStatus("Sleeping",true);
-        //SleepDetails[0]=Greed_Island.time.get();
-        //SleepDetails[1]=hours;
+        SleepDetails[0]=Greed_Island.time.get();
+        SleepDetails[1]=hours;
         //Greed_Island.runListener(this,hours);
-        int sleptAt = Greed_Island.time.get();
-        Thread t = new Thread(new Listener<AtomicInteger>(Greed_Island.time,(x) -> x.get() >= sleptAt+60*hours){
+        
+        /*int sleptAt = Greed_Island.time.get();
+        Listener<AtomicInteger> t = new Listener<AtomicInteger>(Greed_Island.time,(x) -> x.get() >= sleptAt+60*hours){
             @Override
             void onCondition() {
                 setStatus("Sleeping",false);
                 //System.out.println("Woke up "+Name+" at"+Greed_Island.time.get());
+                stop();
             }
-        });
-        
+        };
         t.start();
+        */
     }
     
     void Eat(String item) {
@@ -561,7 +573,7 @@ class Character {
     
     void collect(String item) {
         inventory.set(item,inventory.get(item).units + 1);
-        //sendmessage(" collected "+item+"x1");
+        if (Greed_Island.messageSettings.get("resource collect")) sendmessage(" collected "+item+"x1");
         //System.out.println((Greed_Island.timeToString() +" | "+Name+" collected "+item+"x1"));
     }
     
