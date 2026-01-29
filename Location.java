@@ -41,15 +41,24 @@ class Location {
         resourceModel = new HashMap<String,ArrayList<String>>();
         
         for (String location: Locations) {
-            ArrayList<String> defaultList = new ArrayList<String>();
+            /*ArrayList<String> defaultList = new ArrayList<String>();
             for (int i = 0;i<30;i++) {defaultList.add("Berries");}
             for (int i = 0;i<30;i++) {defaultList.add("Wood");}
             for (int i = 0;i<30;i++) {defaultList.add("Stone");}
             for (int i = 0;i<30;i++) {defaultList.add("Vines");}
             for (int i = 0;i<30;i++) {defaultList.add("Apple");}
             for (int i = 0;i<30;i++) {defaultList.add("Poisonous_Berries");}
+            */
+            resourceModel.put(location,new ArrayList<String>());
             
-            resourceModel.put(location,new ArrayList<String>(defaultList));
+           
+            add(location,"Berries",30);
+            add(location,"Wood",10);
+            add(location,"Stone",10);
+            add(location,"Vines",10);
+            add(location,"Apple",20);
+            add(location,"Poisonous_Berries",30);
+            
             //AtomicInteger recordedSize = new AtomicInteger(0);
             Thread t = new Thread(new FListener<ArrayList<Character>>(getContestantsAt(location),x->x.size()>0,5+RarityPool.randInt(10)){
                 @Override
@@ -80,6 +89,12 @@ class Location {
                 }
             });
             t.start();
+        }
+    }
+    
+    static void add(String location, String resource, int number) {
+        for (int i = 0;i<number;i++) {
+            resourceModel.get(location).add(resource);
         }
     }
     
@@ -136,7 +151,7 @@ class Location {
         for (i = 0; i<resourceModel.get(location).size();i++) {
             if (removed == false && resourceModel.get(location).get(i) == item) {
                 resourceModel.remove(i);
-                removed = true;
+                removed = true; //for ensuring that only one copy is removed.
             }
         }
     }

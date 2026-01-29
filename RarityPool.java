@@ -37,6 +37,10 @@ class RarityPool {
     }*/
     
     void add(String rarity, int rFactor){
+        if (rFactor <= 1) {
+            throw new IllegalArgumentException(rFactor==1?"cannot add (one in 1)":"attempted to add negative");
+        }
+        
         Outcomes.put(rarity,(double)(rFactor));
         updateLCM();
         updatePool();

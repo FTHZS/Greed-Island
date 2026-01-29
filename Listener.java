@@ -110,3 +110,39 @@ abstract class FListener<T> implements Runnable {
         }
     }
 }
+
+/*abstract class RListener<T> implements Runnable {
+    Comparison<T> comparison;
+    T object;
+    int interval;
+    int repeat;
+    
+    RListener(T object, Comparison<T> comparison, int interval,int repeat) {
+        this.object = object;
+        this.comparison = comparison;
+        this.interval = interval;
+        this.repeat = repeat;
+    }
+    
+    abstract void onCondition();
+    
+    @Override
+    public void run(){
+        for (int i=0; i<repeat; i++) {
+            while (comparison.compare(object) == false) {
+                try {
+                    Thread.sleep(0);
+                } catch (Exception e) {}
+            }
+            onCondition();
+            
+            int currentTime = Greed_Island.time.get();
+            while (Greed_Island.time.get() < (currentTime+interval)) {
+                try {
+                    Thread.sleep(0);
+                } catch (Exception e) {}
+            }
+        }
+    }
+}
+*/
