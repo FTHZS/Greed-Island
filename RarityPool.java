@@ -95,7 +95,7 @@ class RarityPool {
     }
     
     String simulate() {
-        int random = new Random().nextInt(poolSize);
+        int random = new Random().nextInt(poolSize+1);
         int cumulative = 0;
         
         //System.out.println("random: "+random);

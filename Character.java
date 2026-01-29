@@ -33,7 +33,7 @@ class Character {
         
         currentLocation = "Bay";
         Truces = new ArrayList<String>();
-        decisionFrequency = 200;
+        decisionFrequency = 300;
         
         Status = new HashMap<String,Boolean>();
         Traits = new HashMap<String,Integer>();
@@ -59,14 +59,14 @@ class Character {
         Status.put("Sleeping",false);
         Status.put("Dead",false);
         
-        decisionProbabilityModel.add("Sleep",decisionFrequency+100);
-        decisionProbabilityModel.add("Travel",decisionFrequency+100);
+        decisionProbabilityModel.add("Sleep",decisionFrequency);
+        decisionProbabilityModel.add("Travel",decisionFrequency);
         decisionProbabilityModel.add("Eat",decisionFrequency);
         decisionProbabilityModel.add("Give",decisionFrequency);
         decisionProbabilityModel.add("Craft",decisionFrequency);
-        decisionProbabilityModel.add("Attack",decisionFrequency+100);
+        decisionProbabilityModel.add("Attack",decisionFrequency);
         
-        Influences.put("Sleep",150);
+        Influences.put("Sleep",0); //maybe initially 150?
         Influences.put("Travel",0);
         Influences.put("Eat",0);
         Influences.put("Give",0);
@@ -78,9 +78,9 @@ class Character {
     Character Clone(String name) {
         Character child = new Character(name);
                 
-        child.Health = new AtomicInteger(Health.get());
+        child.Health = new AtomicInteger(1000);
         
-        int bound = 100;
+        final int bound = 294;
         int variance = 15;
         
         if (Name== "Progenitor"){
@@ -90,10 +90,24 @@ class Character {
         child.Traits = new HashMap<String,Integer>();
         for (Map.Entry<String,Integer> entry : Traits.entrySet()) {
             int mutation = RarityPool.randInt(2*variance)-variance;
-            if (entry.getValue()+mutation >= bound || entry.getValue()+mutation <= (bound*-1)){
+            
+            if (entry.getValue() > bound-10) {
+                mutation = RarityPool.randInt(2*5)-5; //decrease variance as getting close to max.
+            }
+            
+            if (entry.getValue()+mutation >= bound ){//|| entry.getValue()+mutation <= (bound*-1)){
                 mutation = bound-entry.getValue();
             }
             child.Traits.put(entry.getKey(),entry.getValue()+mutation);
+        }
+        
+        if (child.Name == "KING") {
+            child.Traits.put("Sleep",-1000);
+            child.Traits.put("Travel",-400);
+            child.Traits.put("Eat",294);
+            child.Traits.put("Give",-1000);
+            child.Traits.put("Craft",-100);
+            child.Traits.put("Attack",100);
         }
         
         child.Status = new HashMap<String,Boolean>();
@@ -135,7 +149,7 @@ class Character {
             }
         };
         threadpool.add(t1);
-        t1.setName(Name+" hunger tick");
+        t1.setName(Name+"#"+Greed_Island.IterationNumber+" hunger tick");
         t1.start();
         
         TickListener<HashMap<String, Boolean>> t2 = new TickListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Poisoned")==true,1){
@@ -165,7 +179,7 @@ class Character {
             }
         };
         threadpool.add(t2);
-        t2.setName(Name+" poison tick");
+        t2.setName(Name+"#"+Greed_Island.IterationNumber+" poison tick");
         t2.start();
         
         TickListener<HashMap<String, Boolean>> t3 = new TickListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Hungry")==true,1){
@@ -179,19 +193,20 @@ class Character {
             }
         };
         threadpool.add(t3);
-        t3.setName(Name+" Hungry-health tick");
+        t3.setName(Name+"#"+Greed_Island.IterationNumber+" Hungry-health tick");
         t3.start();
         
         StateListener<HashMap<String, Boolean>> t4 = new StateListener<HashMap<String,Boolean>>(Status,(x) -> x.get("Sleeping")==true,1){
             @Override
             void onCondition() {                
                 int now = Greed_Island.time.get();
-                while (Greed_Island.time.get() < SleepDetails[0]+60*SleepDetails[1]) {
+                while (running && Greed_Island.time.get() < SleepDetails[0]+60*SleepDetails[1]) {
                     try {
                         Thread.sleep(0);
                     } catch (Exception e) {
                         //e.printStackTrace();
                         setStatus("Sleeping",false);
+                        Thread.currentThread().interrupt();
                     }
                 }
                 
@@ -200,7 +215,7 @@ class Character {
             }
         };
         threadpool.add(t4);
-        t4.setName(Name+" Sleep State");
+        t4.setName(Name+"#"+Greed_Island.IterationNumber+" Sleep State");
         t4.start();
     }
     
@@ -215,10 +230,10 @@ class Character {
         
         //System.out.println(Name+" has incremented "+value+" hp, now at "+Health);
         if (newHealth <= 0) {
-            sendmessage(" has died.");
             setStatus("Dead", true);
             Health.set(0); // clamp to zero safely
             destroy();
+            sendmessage(" has died.");
         }
     }
     
@@ -252,10 +267,10 @@ class Character {
         if (newHunger < 0) {
             setStatus("Hungry", true);
             HungerLevel.set(0); // clamp to 0 safely
-            setInfluence("Eat", 50, false);
+            //setInfluence("Eat", 50, false);
         } else {
             setStatus("Hungry", false);
-            setInfluence("Eat", -50, false);
+            //setInfluence("Eat", -50, false);
         }
     }
     
@@ -272,7 +287,7 @@ class Character {
         if (newEnergy < 0) {
             setStatus("Tired", true);
             EnergyLevel.set(0);
-            setInfluence("Sleep", 50, true);
+            //setInfluence("Sleep", 50, true);
         } else {
             setStatus("Tired", false);
             // setInfluence("Sleep", -50, true);
@@ -317,9 +332,9 @@ class Character {
     void randomDecide(){
         //Influences.replace("Sleep",-30);
         
-        if (Greed_Island.time.get()%(60*24) <= 60 && Greed_Island.time.get()%(60*24) >= 1320) {
+        /*if (Greed_Island.time.get()%(60*24) <= 60 && Greed_Island.time.get()%(60*24) >= 1320) {
             setInfluence("Sleep", 150,false);
-        }
+        }*/
         
         RarityPool model = new RarityPool();
         for (Map.Entry<String,Double> entry : decisionProbabilityModel.Outcomes.entrySet()) {
@@ -344,7 +359,7 @@ class Character {
                     return;
                 }
                 
-                int random = RarityPool.randInt(5)+1;
+                int random = RarityPool.randInt(3)+1;
                 //Decide("Sleep",new Object[]{hours});
                 Sleep(random);
                 information = " for "+random+" hours.";
@@ -382,7 +397,7 @@ class Character {
                 random = RarityPool.randInt(Greed_Island.Contestants.length);
                 Character recipient = Greed_Island.Contestants[random];
                 while (recipient.Status.get("Dead") == true || recipient.Name == Name) {
-                    random = RarityPool.randInt(Greed_Island.Contestants.length);
+                    random = RarityPool.randInt(Greed_Island.Contestants.length-1);
                     recipient = Greed_Island.Contestants[random];
                 }
                 
@@ -422,7 +437,7 @@ class Character {
                 random = RarityPool.randInt(Greed_Island.Contestants.length);
                 recipient = Greed_Island.Contestants[random];
                 while (recipient.Status.get("Dead") == true || recipient.Name == Name) {
-                    random = RarityPool.randInt(Greed_Island.Contestants.length);
+                    random = RarityPool.randInt(Greed_Island.Contestants.length-1);
                     recipient = Greed_Island.Contestants[random];
                 }
                 
@@ -458,10 +473,10 @@ class Character {
                 break;
         }
         
-        /*if (Greed_Island.showMessages == false) {
+        if (Greed_Island.showMessages == false) {
             return;
         }
-        */
+        
        
         if (randomDecision != "Observe"){
             //new Dialogue((Greed_Island.timeToString() +" | "+Name+" Decided to "+randomDecision+information+"\n")).display(10);

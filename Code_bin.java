@@ -704,4 +704,110 @@ class Greed_Island{
             finalchoice = finalmenu.choice;
         }
     }
+    
+*/
+/*
+import javax.swing.*;
+import java.awt.*;
+import java.awt.image.*;
+import java.io.*;
+import javax.imageio.ImageIO;
+import java.util.*;
+
+public class MapWithCharacters extends JPanel {
+    private BufferedImage map;
+    private java.util.List<Character> characters;
+    private Map<String, Point> locationPoints;
+
+    public MapWithCharacters(String imagePath) {
+        try {
+            map = ImageIO.read(new File(imagePath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        characters = new ArrayList<>();
+
+        // Predefined coordinates for each island region (tweak as needed)
+        locationPoints = new HashMap<>();
+        locationPoints.put("Bay", new Point(170, 250));
+        locationPoints.put("Volcano", new Point(300, 80));
+        locationPoints.put("Forest", new Point(320, 200));
+        locationPoints.put("South Coast", new Point(250, 380));
+        locationPoints.put("East Coast", new Point(500, 250));
+    }
+
+    public void setCharacters(java.util.List<Character> chars) {
+        this.characters = chars;
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        // Draw map background
+        if (map != null) {
+            double scale = 0.5;
+            int newW = (int)(map.getWidth() * scale);
+            int newH = (int)(map.getHeight() * scale);
+    
+            // draw scaled image
+            g.drawImage(map, 0, 0, newW, newH, this);
+        }
+        
+        Map<String, java.util.List<Character>> grouped = new HashMap<>();
+        for (Character c : characters) {
+            grouped.computeIfAbsent(c.currentLocation, k -> new ArrayList<>()).add(c);
+        }
+
+        // Draw pins for each character
+        g.setFont(new Font("Arial", Font.BOLD, 12));
+        for (String loc : grouped.keySet()) {
+            Point p = locationPoints.get(loc);
+            if (p != null) {
+                java.util.List<Character> group = grouped.get(loc);
+                int offset = 0;
+                for (Character c : group) {
+                    // Red circle pin
+                    g.setColor(Color.RED);
+                    g.fillOval(p.x - 5, p.y - 5 + offset, 10, 10);
+
+                    // Label
+                    g.setColor(Color.BLACK);
+                    g.drawString(c.Name, p.x + 12, p.y + offset);
+
+                    offset += 18; // move down for next pin
+                }
+            }
+        }
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return (map != null) ? new Dimension(map.getWidth(), map.getHeight()) : new Dimension(800, 600);
+    }
+
+    // Demo
+    public static void display() {
+        JFrame frame = new JFrame("Island Map with Characters");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        MapWithCharacters mapPanel = new MapWithCharacters("map.png");
+
+        
+        ArrayList<Character> charList = new ArrayList<>();
+        
+        for (Character character : Greed_Island.Contestants) {
+            if (character.Status.get("Dead") == false) {
+                 charList.add(character);   
+            }
+        }
+        mapPanel.setCharacters(charList);
+
+        JScrollPane scrollPane = new JScrollPane(mapPanel);
+        frame.add(scrollPane);
+        frame.pack();
+        frame.setVisible(true);
+    }
 }*/

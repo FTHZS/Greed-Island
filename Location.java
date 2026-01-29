@@ -1,5 +1,7 @@
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class Location {
@@ -11,28 +13,27 @@ class Location {
     
     static {
         energyCosts = new HashMap<String,Integer>();
-        energyCosts.put("Bay-Volcano",100);
-        energyCosts.put("Bay-South Coast",100);
-        energyCosts.put("Forest-Volcano",100);
-        energyCosts.put("Forest-Bay",100);
-        energyCosts.put("Forest-East Coast",100);
-        energyCosts.put("Forest-South Coast",100);
-        energyCosts.put("East Coast-Volcano",100);
-        energyCosts.put("East Coast-South Coast",100);
-        energyCosts.put("East Coast-Forest",100);
-        energyCosts.put("South Coast-Bay",100);
-        energyCosts.put("South Coast-East Coast",100);
-        energyCosts.put("South Coast-Forest",100);
-        energyCosts.put("Volcano-Bay",100);
-        energyCosts.put("Volcano-East Coast",100);
-        energyCosts.put("Volcano-Forest",100);
+        energyCosts.put("Bay-Volcano",200);
+        energyCosts.put("Bay-South Coast",200);
+        energyCosts.put("Forest-Volcano",200);
+        energyCosts.put("Forest-East Coast",200);
+        energyCosts.put("Forest-South Coast",200);
+        energyCosts.put("East Coast-Volcano",200);
+        energyCosts.put("East Coast-South Coast",200);
+        energyCosts.put("East Coast-Forest",200);
+        energyCosts.put("South Coast-Bay",200);
+        energyCosts.put("South Coast-East Coast",200);
+        energyCosts.put("South Coast-Forest",200);
+        energyCosts.put("Volcano-Bay",200);
+        energyCosts.put("Volcano-East Coast",200);
+        energyCosts.put("Volcano-Forest",200);
         
         Locations = new String[]{
             "Forest",
             "East Coast",
             "Bay",
             "Volcano",
-            "Soutch Coast"
+            "South Coast"
         };
         
         threadpool = new ArrayList<Listener>();
@@ -61,24 +62,29 @@ class Location {
             add(location,"Poisonous_Berries",30);
             
             //AtomicInteger recordedSize = new AtomicInteger(0);
-            TickListener<ArrayList<Character>> t = new TickListener<ArrayList<Character>>(getContestantsAt(location),x->x.size()>0,5+RarityPool.randInt(10)){
+            TickListener<Character[]> t = new TickListener<Character[]>(Greed_Island.Contestants,x->Arrays.stream(x).filter(y->y.currentLocation == location).count()>0,5+RarityPool.randInt(10)){
                 @Override
                 public void onCondition() {
                     if (getResources(location).size() <= 0) {
                         return;
-                        //thread . stop function goes here
                     }
-                    if (getContestantsAt(location).size() <= 0) {
+                    
+                    ArrayList<Character> contestants = Arrays.stream(Greed_Island.Contestants).filter(x->x.currentLocation == location).collect(Collectors.toCollection(ArrayList::new));
+                    if (contestants.size() <= 0) {
                         return;
                         //make the get contestants function thread safe.
                     }
-                    
-                    int random = RarityPool.randInt(getContestantsAt(location).size());
-                    Character chosen = getContestantsAt(location).get(random);
-                    while (chosen.Status.get("Dead") == true) {
-                        random = RarityPool.randInt(getContestantsAt(location).size());
-                        chosen = getContestantsAt(location).get(random);
+                    int random = RarityPool.randInt(contestants.size());
+                    Character chosen = contestants.get(random);
+                    while (running && chosen.Status.get("Dead") == true) {
+                        contestants = Arrays.stream(Greed_Island.Contestants).filter(x->x.currentLocation == location).collect(Collectors.toCollection(ArrayList::new));
+                        if (contestants.size() <= 0) {
+                            return;
+                        }
+                        random = RarityPool.randInt(contestants.size());
+                        chosen = contestants.get(random);
                     }
+                    
                     /*int currentTime = Greed_Island.time.get();
                     int randomTime = 5+RarityPool.randInt(10);
                     
@@ -93,7 +99,7 @@ class Location {
                 }
             };
             threadpool.add(t);
-            t.setName(location+" resource tick");
+            t.setName(location+"#"+Greed_Island.IterationNumber+" resource tick");
             t.start();
         }
     }
@@ -118,12 +124,13 @@ class Location {
     static ArrayList<Character> getContestantsAt(String location) {
         ArrayList<Character> contestants = new ArrayList<Character>();
         for (Character character : Greed_Island.Contestants) {
-            if (character.currentLocation == location) {
+            if (character.Status.get("Dead")==false&&character.currentLocation == location) {
                 contestants.add(character);
             }
         }
         
         return contestants;
+        //return Arrays.stream(Greed_Island.Contestants).filter(x-> x.currentLocation == location).collect(Collectors.toCollection(ArrayList::new));
     }
     
     static String[] getTravelOptions(String currentLocation) {
@@ -132,7 +139,7 @@ class Location {
                 return new String[]{"Volcano","South Coast"};
                 
             case "Forest":
-                return new String[]{"Volcano","South Coast","East Coast","Bay"};
+                return new String[]{"Volcano","South Coast","East Coast"};
                 
             case "East Coast":
                 return new String[]{"Volcano","South Coast","Forest"};

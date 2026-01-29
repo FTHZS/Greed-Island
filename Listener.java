@@ -50,8 +50,17 @@ abstract class Listener<T> implements Runnable {
     }
 
     public void stop() {
-        running = false;
-        if (thread != null) thread.interrupt();
+        running = false;        
+        if (thread != null) {
+            thread.interrupt(); 
+            try {
+                if (Thread.currentThread() != thread) {
+                    thread.join();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
     
     @Override
@@ -63,7 +72,7 @@ abstract class Listener<T> implements Runnable {
             if (running) onCondition();
         } catch (InterruptedException e) {
             //e.printStackTrace();
-            // graceful exit
+            Thread.currentThread().interrupt();
         }
     }   
 }
@@ -90,6 +99,10 @@ abstract class TickListener<T> extends Listener<T> {
                 if (!running) break;
     
                 int lastTime = Greed_Island.time.get();
+                /*if (lastTime == 7200) {
+                    lastTime = 0;    
+                }*/
+                
                 while (running && comparison.compare(object)) {
                     int now = Greed_Island.time.get();
                     
@@ -107,7 +120,8 @@ abstract class TickListener<T> extends Listener<T> {
             }
         } catch (InterruptedException e) {
             //e.printStackTrace();
-            // exit
+            running = false;
+            Thread.currentThread().interrupt();
         }
     }
 }
@@ -132,6 +146,10 @@ abstract class StateListener<T> extends Listener<T> {
                 if (!running) break;
     
                 int lastTime = Greed_Island.time.get();
+                /*if (lastTime == 7200) {
+                    lastTime = 0;    
+                }*/
+                
                 while (running && comparison.compare(object)) {
                     int now = Greed_Island.time.get();
                     
@@ -146,7 +164,8 @@ abstract class StateListener<T> extends Listener<T> {
             }
         } catch (InterruptedException e) {
             //e.printStackTrace();
-            // exit
+            running = false;
+            Thread.currentThread().interrupt();
         }
     }
 }

@@ -115,7 +115,7 @@ class Dialogue {
             public void run() {
                 while (true) {
                     workerRunning = true;
-                    if (dialogueQueue.size()==0) {
+                    if (dialogueQueue.size()<=0) {
                         workerRunning = false;
                         try {
                             Thread.sleep(0);

@@ -10,6 +10,7 @@ class Greed_Island{
     static volatile Character[] Contestants;
     static AtomicInteger time;
     static ArrayList<Character> Winners;
+    static volatile int IterationNumber;
     
     static boolean showMessages;
     static int interval;
@@ -43,10 +44,11 @@ class Greed_Island{
         menu.add("Change message interval");
         menu.add("View contestant statuses");
         menu.add("Change message settings");
+        menu.add("View item index");
         
         finalmenu = new Menu();
-        finalmenu.add("Exit");
         finalmenu.add("Run another iteration");
+        finalmenu.add("Exit");        
         
         messageIntervalmenu = new Menu();
         messageIntervalmenu.add("Slow (20 ms)");
@@ -72,14 +74,23 @@ class Greed_Island{
             "Chad",
             "Carla",
             "Leandra",
-            "KING"
+            "KING",
+            "James",
+            "Emma",
+            "Sophia",
+            "David",
+            "Daniel"
         };
         //String[] Names = new String[]{"Character#1","Character#2"};
         
         Contestants = new Character[Names.length];
         int children = 0;
+        outerWhile:
         while (children < Names.length) {
-            for (Character progenitor:Winners){     
+            for (Character progenitor:Winners){
+                if (!(children < Names.length)) {
+                    break outerWhile;
+                }
                 //for (int i = 0; i<Names.length;i++) {
                 Contestants[children] = progenitor.Clone(Names[children]);
                 Contestants[children].spawn();
@@ -94,8 +105,8 @@ class Greed_Island{
     }
     
     private static Boolean Turn() {
-        if (getCount() <=5) {
-            return false; //collect the last 5 survivors;
+        if (getCount() <= 3) {
+            return false; //collect the last 3 survivors;
         }
         
         for (Character character : Contestants) {
@@ -209,6 +220,7 @@ class Greed_Island{
                         }
                         System.out.println("");
                     }
+                    
                     break;
                 case "6":
                     for (Character character : Arrays.stream(Contestants).filter(x->x.Status.get("Dead")==false).collect(Collectors.toCollection(ArrayList::new))) {
@@ -292,6 +304,9 @@ class Greed_Island{
                     }
                     
                     break;
+                case "11":
+                    Item.displayIndex();
+                    break;
                 default:
                     System.out.println("Invalid choice.");
                     break;
@@ -313,10 +328,10 @@ class Greed_Island{
             startIntro();
         }
         
-        initializeCharacters();
-        Location.initialize();
-        
         time.set(0);
+        
+        initializeCharacters();
+        Location.initialize();     
 
         boolean running = true;
         outer:
@@ -342,6 +357,9 @@ class Greed_Island{
                     running = false;
                     messageSettings.replace("resource collect",false);
                     messageSettings.replace("wake up",false);
+                    for (Character character : Contestants) {
+                        character.destroy();
+                    }
                 }
                 
                 try {
@@ -352,7 +370,7 @@ class Greed_Island{
             }
         }
         
-        //Location.destroy();
+        Location.destroy();
         
         System.out.println("-----------------------------------");
         System.out.println("THE WINNERS ARE:\n");
@@ -372,18 +390,27 @@ class Greed_Island{
    
     }
     
-    /*static void runIterations(int n) {
-        for (int i = 0; i<n; i++){
+    static void runIterations(int n) {
+        IterationNumber = 0;
+        showMessages = false;
+        
+        for (IterationNumber = 0; IterationNumber<n; IterationNumber++){
             runIteration(false);
+            /*try {
+                Thread.sleep(100); //cooldown
+            } catch (Exception e) {
+                e.printStackTrace();
+            }*/
         }
-    }*/
+    }
     
     static void main(){
-        String finalchoice = "2";
-        int iterationNumber = 1;
-        while (finalchoice != "1") {
-            if (iterationNumber > 1) {
-                System.out.println("Iteration "+iterationNumber);
+        String finalchoice = "1";
+        IterationNumber = 0;
+        while (finalchoice != "2") {
+            IterationNumber++;
+            if (IterationNumber > 1) {
+                System.out.println("--------------------Iteration "+IterationNumber+"--------------------");
             }
             try {
                 runIteration(true);
